@@ -167,7 +167,7 @@ for frac in fractions:
     d = frac_h * D_max
     poly_eroded = poly.buffer(-d)
     if poly_eroded.is_empty:
-        print(f"⚠️ Polygone vide à frac={frac:.2f}, on coupe.")
+        print(f"Polygone vide à frac={frac:.2f}, on coupe.")
         continue
 
     mask_e     = geometry_mask([mapping(poly_eroded)], invert=True, transform=transform, out_shape=lidar.shape)
@@ -212,7 +212,7 @@ for frac in fractions:
     # 4. Accumulation finale
     snow_h = max_snow_height * decay_profile * slope_factor * wind_factor * (1 - frac_v)
 
-    # ✅ Calcul volume
+    # Calcul volume
     pixel_area   = res_x * res_y
     volume_total = np.sum(snow_h) * pixel_area
 
@@ -297,7 +297,7 @@ for frac in fractions:
     shadow=True
     )
     
-    # ✅ 5. Volume en m³ (calcul et texte noir)
+    # 5. Volume en m³ (calcul et texte noir)
     pixel_area   = res_x * res_y
     volume_total = max(np.sum(snow_h) * pixel_area, 0)
     plotter.add_text(f"Volume neige : {volume_total:,.0f} m³", position='lower_right', font_size=14, color='black')
@@ -333,7 +333,7 @@ for frac in fractions:
     out_path = os.path.join(out_dir, f'melt_{int(frac*100)}.png')
     plotter.screenshot(out_path)
     plotter.close()
-    print(f"✅ Image générée : {out_path}")
+    print(f"Image générée : {out_path}")
     </pre>
   </div>
 </body>
