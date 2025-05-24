@@ -116,7 +116,7 @@ res_x_hs, res_y_hs = res_x / compression_factor, res_y / compression_factor
 # === 3. Préparation cloud Hillshade
 rows_hs, cols_hs = np.where(hillshade_resampled != nodata_hs)
 if len(rows_hs) == 0:
-    raise ValueError("⚠️ Aucun pixel valide dans le hillshade compressé. Essaie un facteur de compression plus grand.")
+    raise ValueError("Aucun pixel valide dans le hillshade compressé. Essaie un facteur de compression plus grand.")
 
 xs_hs, ys_hs = rasterio.transform.xy(transform_hs, rows_hs, cols_hs)
 xs_hs, ys_hs = np.array(xs_hs), np.array(ys_hs)
