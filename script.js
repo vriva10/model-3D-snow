@@ -3,17 +3,17 @@ const animations = [
   {
     id: 'animation1',
     baseName: 'melt_',
-    frameCount: 10, // mets ici le bon nombre de frames
+    frameCount: 19, // mets ici le bon nombre de frames
   },
   {
     id: 'animation2',
     baseName: 'melt2_',
-    frameCount: 10,
+    frameCount: 19,
   },
   {
     id: 'animation3',
     baseName: 'melt3_',
-    frameCount: 10,
+    frameCount: 19,
   },
 ];
 
