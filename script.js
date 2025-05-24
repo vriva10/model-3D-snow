@@ -6,19 +6,41 @@ function createAnimation(id, prefix) {
 
   let currentFrame = 0;
   const imgElement = document.getElementById(id);
-  const fps = 5; // images par seconde
+  const fps = 5;
+  let intervalId = null;
 
-  setInterval(() => {
+  function updateFrame() {
     currentFrame = (currentFrame + 1) % frames.length;
     imgElement.src = frames[currentFrame];
-  }, 1000 / fps);
+  }
+
+  function startAnimation() {
+    if (!intervalId) {
+      intervalId = setInterval(updateFrame, 1000 / fps);
+    }
+  }
+
+  function stopAnimation() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  // Lancer automatiquement
+  startAnimation();
+
+  // Ajouter gestion du survol
+  imgElement.addEventListener('mouseenter', stopAnimation);
+  imgElement.addEventListener('mouseleave', startAnimation);
 }
 
-// Lancer les 4 animations
+// Lancer les animations
 createAnimation("animation1", "melt");
 createAnimation("animation2", "melt2");
 createAnimation("animation3", "melt3");
 
+// Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
   window.open('model.html', '_blank');
 });
