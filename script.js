@@ -1,24 +1,42 @@
-function createAnimation(id, prefix) {
-  const frames = [];
-  for (let i = 0; i <= 100; i += 10) {
-    frames.push(`assets/${prefix}_${i}.png`);
+// === Configuration pour chaque animation ===
+const animations = [
+  {
+    id: 'animation1',
+    baseName: 'melt_',
+    frameCount: 10, // mets ici le bon nombre de frames
+  },
+  {
+    id: 'animation2',
+    baseName: 'melt2_',
+    frameCount: 10,
+  },
+  {
+    id: 'animation3',
+    baseName: 'melt3_',
+    frameCount: 10,
+  },
+];
+
+animations.forEach(anim => {
+  const img = document.getElementById(anim.id);
+  let frame = 0;
+  let intervalId;
+
+  function startAnimation() {
+    intervalId = setInterval(() => {
+      frame = (frame + 1) % anim.frameCount;
+      img.src = `assets/${anim.baseName}${frame}.png`;
+    }, 200); // durée entre les frames en ms
   }
 
-  let currentFrame = 0;
-  const imgElement = document.getElementById(id);
-  const fps = 5; // images par seconde
+  function stopAnimation() {
+    clearInterval(intervalId);
+  }
 
-  setInterval(() => {
-    currentFrame = (currentFrame + 1) % frames.length;
-    imgElement.src = frames[currentFrame];
-  }, 1000 / fps);
-}
+  // Démarrer l’animation au début
+  startAnimation();
 
-// Lancer les 4 animations
-createAnimation("animation1", "melt");
-createAnimation("animation2", "melt2");
-createAnimation("animation3", "melt3");
-
-document.getElementById('openModel').addEventListener('click', () => {
-  window.open('model.html', '_blank');
+  // Gérer le hover : pause/reprise
+  img.addEventListener('mouseenter', stopAnimation);
+  img.addEventListener('mouseleave', startAnimation);
 });
