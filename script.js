@@ -56,7 +56,6 @@ function setupLightbox(id, prefix) {
   img.addEventListener("click", () => {
     let currentFrame = frames.indexOf(img.src);
     const fps = 5;
-    let animationInterval;
 
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
@@ -77,35 +76,28 @@ function setupLightbox(id, prefix) {
     fullImg.style.boxShadow = "0 0 20px white";
     fullImg.style.border = "5px solid white";
     fullImg.style.borderRadius = "8px";
-    fullImg.style.cursor = "default";
 
     overlay.appendChild(fullImg);
     document.body.appendChild(overlay);
 
-    function startAnimation() {
-      animationInterval = setInterval(() => {
-        currentFrame = (currentFrame + 1) % frames.length;
-        fullImg.src = frames[currentFrame];
-      }, 1000 / fps);
-    }
+    // Empêcher clic sur l’image de fermer l’overlay
+    fullImg.addEventListener("click", (e) => e.stopPropagation());
 
-    function stopAnimation() {
-      clearInterval(animationInterval);
-    }
-
-    startAnimation();
-
-    // Pause/reprise au survol
-    fullImg.addEventListener("mouseenter", stopAnimation);
-    fullImg.addEventListener("mouseleave", startAnimation);
-
-    // Clic sur le fond pour fermer
     overlay.addEventListener("click", () => {
-      stopAnimation();
+      clearInterval(animationInterval);
       document.body.removeChild(overlay);
     });
 
-    // Empêche le clic sur l’image de fermer la lightbox
-    fullImg.addEventListener("click", (e) => e.stopPropagation());
+    // Animation dans la lightbox
+    const animationInterval = setInterval(() => {
+      currentFrame = (currentFrame + 1) % frames.length;
+      fullImg.src = frames[currentFrame];
+    }, 1000 / fps);
   });
 }
+
+// Appliquer la lightbox à chaque animation
+setupLightbox("animation1", "melt");
+setupLightbox("animation2", "melt2");
+setupLightbox("animation3", "melt3");
+
