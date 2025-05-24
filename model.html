@@ -32,7 +32,308 @@
     <button onclick="window.location.href='index.html'">← Retour</button>
     <h1>Code du Modèle 3D</h1>
     <pre>
-blablabla
+import numpy as np
+import geopandas as gpd
+import rasterio
+from rasterio.enums import Resampling
+from matplotlib.colors import LightSource
+from shapely.geometry import mapping, box
+from scipy.ndimage import distance_transform_edt
+import pyvista as pv
+import os
+from rasterio.features import geometry_mask
+
+# === Paramètres ===
+shapefile_path    = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\combes_2018.shp'
+raster_path       = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\raster_10.tif'
+out_dir           = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\melt_frames_fullzone4'
+max_snow_height   = 10.0
+view_vector       = (10, 0, 4.5)
+ground_color      = 'saddlebrown'
+snow_color        = 'white'
+fractions         = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5]
+fps               = 0.5
+vertical_weight   = 0.6
+horizontal_weight = 0.4
+compression_factor = 0.2
+
+assert abs(vertical_weight + horizontal_weight - 1.0) < 1e-6
+os.makedirs(out_dir, exist_ok=True)
+
+# === 1. Charger et filtrer la shapefile
+gdf = gpd.read_file(shapefile_path)
+gdf = gdf[gdf.is_valid & ~gdf.is_empty]
+
+with rasterio.open(raster_path) as src:
+    lidar     = src.read(1)
+    transform = src.transform
+    res_x, res_y = src.res
+    nodata    = src.nodata
+    bounds_raster = box(*src.bounds)
+
+gdf = gdf[gdf.geometry.intersects(bounds_raster)]
+
+if gdf.empty:
+    raise ValueError("Aucune géométrie valide n'intersecte le raster. Vérifier shapefile.")
+
+poly = gdf.geometry.unary_union
+
+from matplotlib.colors import LightSource
+from rasterio.transform import Affine
+from rasterio.enums import Resampling
+from rasterio.warp import reproject
+
+# === 2. Générer et compresser l'hillshade à partir du DEM
+ls = LightSource(azdeg=315, altdeg=45)
+hillshade_fullres = ls.hillshade(lidar, vert_exag=1, dx=res_x, dy=res_y)
+
+# Compression (resampling)
+new_width = int(hillshade_fullres.shape[1] * compression_factor)
+new_height = int(hillshade_fullres.shape[0] * compression_factor)
+
+# Créer une matrice vide pour l’hillshade compressé
+hillshade_resampled = np.empty((new_height, new_width), dtype=np.float32)
+
+# Calcul du nouveau transform
+scale_x = hillshade_fullres.shape[1] / new_width
+scale_y = hillshade_fullres.shape[0] / new_height
+transform_hs = transform * Affine.scale(scale_x, scale_y)
+
+# Reproject/resample
+reproject(
+    source=hillshade_fullres,
+    destination=hillshade_resampled,
+    src_transform=transform,
+    src_crs=src.crs,
+    dst_transform=transform_hs,
+    dst_crs=src.crs,
+    resampling=Resampling.bilinear
+)
+
+nodata_hs = -9999  # Valeur fictive
+res_x_hs, res_y_hs = res_x / compression_factor, res_y / compression_factor
+
+# === 3. Préparation cloud Hillshade
+rows_hs, cols_hs = np.where(hillshade_resampled != nodata_hs)
+if len(rows_hs) == 0:
+    raise ValueError("⚠️ Aucun pixel valide dans le hillshade compressé. Essaie un facteur de compression plus grand.")
+
+xs_hs, ys_hs = rasterio.transform.xy(transform_hs, rows_hs, cols_hs)
+xs_hs, ys_hs = np.array(xs_hs), np.array(ys_hs)
+
+rows_idx = np.clip(((ys_hs - transform[5]) / transform[4]).astype(int), 0, lidar.shape[0] - 1)
+cols_idx = np.clip(((xs_hs - transform[2]) / transform[0]).astype(int), 0, lidar.shape[1] - 1)
+zs_hs    = lidar[rows_idx, cols_idx]
+
+# === 3b. Filtrage par bounding box élargie
+minx, miny, maxx, maxy = poly.bounds
+buffer = 50  # En mètres
+bbox = box(minx - buffer, miny - buffer, maxx + buffer, maxy + buffer)
+
+inside_bbox = (
+    (xs_hs >= bbox.bounds[0]) & (xs_hs <= bbox.bounds[2]) &
+    (ys_hs >= bbox.bounds[1]) & (ys_hs <= bbox.bounds[3])
+)
+
+xs_hs = xs_hs[inside_bbox]
+ys_hs = ys_hs[inside_bbox]
+rows_idx = rows_idx[inside_bbox]
+cols_idx = cols_idx[inside_bbox]
+zs_hs = zs_hs[inside_bbox]
+intensity_vals = hillshade_resampled[rows_hs, cols_hs][inside_bbox]
+
+cloud_hs = pv.PolyData(np.c_[xs_hs, ys_hs, zs_hs])
+surf_hs  = cloud_hs.delaunay_2d(alpha=np.hypot(res_x_hs, res_y_hs) * 15)
+surf_hs["intensity"] = intensity_vals
+
+# === 3. Calcul D_max
+mask0    = geometry_mask([mapping(poly)], invert=True, transform=transform, out_shape=lidar.shape)
+dist_pix = distance_transform_edt(mask0)
+D_max    = np.nanmax(dist_pix) * res_x
+
+# === 4. Sol fixe
+mask_bool0   = mask0 & (lidar != nodata)
+rows0, cols0 = np.where(mask_bool0)
+xs0, ys0     = rasterio.transform.xy(transform, rows0, cols0)
+zs0          = lidar[rows0, cols0]
+cloud_ground = pv.PolyData(np.c_[xs0, ys0, zs0])
+surf_ground  = cloud_ground.delaunay_2d(alpha=np.hypot(res_x, res_y) * 1.5)
+
+# === 5. Fonte
+for frac in fractions:
+    frac_h = frac * horizontal_weight
+    frac_v = frac * vertical_weight
+
+    d = frac_h * D_max
+    poly_eroded = poly.buffer(-d)
+    if poly_eroded.is_empty:
+        print(f"⚠️ Polygone vide à frac={frac:.2f}, on coupe.")
+        continue
+
+    mask_e     = geometry_mask([mapping(poly_eroded)], invert=True, transform=transform, out_shape=lidar.shape)
+    mask_bool  = mask_e & (lidar != nodata)
+    rows, cols = np.where(mask_bool)
+    xs, ys     = rasterio.transform.xy(transform, rows, cols)
+    zs_ground  = lidar[rows, cols]
+    
+    dist_e  = distance_transform_edt(mask_e)
+    D_max_e = np.nanmax(dist_e) * res_x
+    norm_d  = dist_e[mask_bool] * res_x / D_max_e
+    # Forme adoucie : accumulation maximum au centre, décroissance radiale exponentielle (type loi gamma simplifiée)
+    decay = 1 - np.exp(-2 * norm_d)  # 3 = taux d’amortissement = masse accumulation en bord (ajustable)
+    # Simule une accumulation plus plate au centre, et déversée naturellement
+    snow_h = max_snow_height * decay * (1 - frac_v)
+    zs_snow = zs_ground + snow_h
+    
+    # 1. Profil radial d'accumulation
+    norm_d = dist_e[mask_bool] * res_x / D_max_e
+    decay_profile = 1 - np.exp(-2.5 * norm_d)  # accumulation maximale au centre (ajustable)
+    
+    # 2. Réduction selon pente
+    from scipy.ndimage import gaussian_filter
+    lidar_smoothed = gaussian_filter(lidar, sigma=1)
+    grad_y, grad_x = np.gradient(lidar_smoothed, res_y, res_x)
+    slope = np.sqrt(grad_x**2 + grad_y**2)  # pente en m/m
+    slope_percent = slope * 100
+    slope_factor = np.exp(-0.05 * slope_percent[rows, cols])  # réduit si pente forte
+    
+    # 3. Facteur d'accumulation orienté selon le vent
+    # === Paramètre : direction du vent en degrés (0=N, 90=E, 180=S, 270=O)
+    wind_dir_deg = 135  # exemple : vent du NO vers SE (ajustable)
+    wind_rad = np.deg2rad(wind_dir_deg)
+    wind_vector = np.array([np.cos(wind_rad), np.sin(wind_rad)])  # vecteur normalisé
+    
+    center_x = np.mean(xs)
+    center_y = np.mean(ys)
+    rel_coords = np.stack([xs - center_x, ys - center_y], axis=1)
+    wind_proj = rel_coords @ wind_vector  # produit scalaire
+    wind_factor = 0.5 + 0.5 * (1 - (wind_proj - wind_proj.min()) / (np.ptp(wind_proj) + 1e-6))
+    
+    # 4. Accumulation finale
+    snow_h = max_snow_height * decay_profile * slope_factor * wind_factor * (1 - frac_v)
+
+    # ✅ Calcul volume
+    pixel_area   = res_x * res_y
+    volume_total = np.sum(snow_h) * pixel_area
+
+    cloud_snow = pv.PolyData(np.c_[xs, ys, zs_snow])
+    surf_snow  = cloud_snow.delaunay_2d(alpha=np.hypot(res_x, res_y) * 5)
+
+    # === Affichage
+    plotter = pv.Plotter(off_screen=True)
+    
+
+    # 1. Hillshade avec cmap bleu-jaune (cividis)
+    plotter.add_mesh(surf_hs, scalars='intensity', cmap='gray', opacity=1, show_scalar_bar=False)
+
+    # 2. Terrain transparent et neige
+    plotter.add_mesh(surf_ground, color=ground_color, opacity=0.0, show_edges=False)
+    plotter.add_mesh(surf_snow,   color=snow_color,  opacity=1, show_edges=False)
+
+    
+
+    # Ajuster le zoom
+    plotter.camera.zoom(1.1)  # zoom (ajustable)
+
+    # === 4. Échelle 200 m positionnable manuellement ===
+    scale_len = 200  # Longueur de la barre (ajustable)
+    
+    # Choisir une position personnalisée (ici coin inférieur gauche)
+    x_min, x_max = np.min(xs_hs), np.max(xs_hs)
+    y_min, y_max = np.min(ys_hs), np.max(ys_hs)
+    
+    # Position de départ de la barre  (ajustable)
+    x_start = x_min + 300
+    y_start = y_min + 3500
+    
+    # Récupérer altitude correspondante dans le lidar
+    row_idx = np.clip(int((y_start - transform[5]) / transform[4]), 0, lidar.shape[0]-1)
+    col_idx = np.clip(int((x_start - transform[2]) / transform[0]), 0, lidar.shape[1]-1)
+    z_start = lidar[row_idx, col_idx]
+    z_elev = z_start + 5  # Légèrement au-dessus du terrain
+    
+    # Créer la ligne d’échelle
+    p_start = [x_start, y_start, z_elev]
+    p_end   = [x_start + scale_len, y_start, z_elev]
+    # Créer la ligne de fond (contour noir, légèrement plus large)
+    scale_bar_outline = pv.Line(p_start, p_end)
+    plotter.add_mesh(scale_bar_outline, color='black', line_width=5)
+
+    # Créer la ligne blanche par-dessus
+    scale_bar = pv.Line(p_start, p_end)
+    plotter.add_mesh(scale_bar, color='black', line_width=4)
+    
+    # Ajouter le texte "200 m" au-dessus de la ligne
+    label_pos = [(p_start[0] + p_end[0]) / 2, y_start, z_elev + 200]
+    plotter.add_point_labels([label_pos], ["200 m"], text_color='white', font_size=14, point_size=0)
+
+    # === Direction caméra (viewport label en haut à droite)
+    view_label = f"Vue caméra : {view_vector}"
+    plotter.add_text(
+    view_label,
+    position='upper_right',  # coin supérieur droit
+    font_size=12,
+    color='black',
+    shadow=True
+    )    
+    
+    # === 5. Affichage direction du vent en haut à droite ===
+    wind_label = f"Vent depuis {wind_dir_deg}°"
+    plotter.add_text(
+    wind_label,
+    position='upper_left',
+    font_size=12,
+    color='black',
+    shadow=True
+    )
+    
+    # === Hauteur maximale de neige (en bas à gauche)
+    max_snow_display = np.max(snow_h) if np.any(snow_h) else 0
+    plotter.add_text(
+    f"Hauteur max neige : {max_snow_display:.1f} m",
+    position="lower_left",
+    font_size=10,
+    color='black',
+    shadow=True
+    )
+    
+    # ✅ 5. Volume en m³ (calcul et texte noir)
+    pixel_area   = res_x * res_y
+    volume_total = max(np.sum(snow_h) * pixel_area, 0)
+    plotter.add_text(f"Volume neige : {volume_total:,.0f} m³", position='lower_right', font_size=14, color='black')
+
+    # 1. Centre de la scène (basé sur surf_hs)
+    bounds = surf_hs.bounds
+    center = [
+    (bounds[0] + bounds[1]) / 2,
+    (bounds[2] + bounds[3]) / 2,
+    (bounds[4] + bounds[5]) / 2,
+    ]
+
+    # 2. Normaliser le view_vector et appliquer une distance
+    import numpy as np
+    vv = np.array(view_vector)
+    norm_vv = vv / np.linalg.norm(vv)  # direction unitaire
+    
+    # Distance raisonnable à partir du centre (ajustable selon la taille du modèle)
+    distance = max(bounds[1] - bounds[0], bounds[3] - bounds[2]) * 2  # 2x largeur max
+    
+    camera_position = center + norm_vv * distance
+    
+    # 3. Appliquer à PyVista
+    plotter.camera_position = [camera_position.tolist(), center, (0, 0, 1)]
+
+    # → Affichage interactif sans fermer
+    plotter.show(auto_close=False)
+
+    # → Affichage interactif sans fermer
+    plotter.show(auto_close=False)
+
+    # 6. Capture
+    out_path = os.path.join(out_dir, f'melt_{int(frac*100)}.png')
+    plotter.screenshot(out_path)
+    plotter.close()
+    print(f"✅ Image générée : {out_path}")
     </pre>
   </div>
 </body>
