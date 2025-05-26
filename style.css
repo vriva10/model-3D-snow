@@ -5,38 +5,51 @@ body {
   text-align: center;
 }
 
-.grid {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-}
-
-.anim {
-  width: 400px;
-  position: absolute;
-}
-
-/* 2 animations en haut (gauche et droite) */
-#animation1 {
-  top: 20px;
-  left: 50px;
-}
-
-#animation2 {
-  top: 20px;
-  right: 50px;
-}
-
-
-/* 1 animation en bas à gauche */
-#animation3 {
-  bottom: 20px;
-  left: 60px;
-}
-
+/* Schéma en haut de page */
 .schema {
   display: block;
   max-width: 90%;
   height: auto;
   margin: 40px auto 20px auto;
 }
+
+/* Grille des animations : 3 colonnes, s’ajuste automatiquement */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 colonnes */
+  gap: 30px; /* espace entre les animations */
+  padding: 40px;
+  justify-items: center; /* centre chaque image horizontalement */
+}
+
+/* Style des images animées */
+.anim {
+  width: 300px;
+  height: auto;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.anim:hover {
+  transform: scale(1.05);
+}
+
+/* (Facultatif) Modale plein écran */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal img {
+  width: 80%;
+  max-width: 900px;
+}
+
