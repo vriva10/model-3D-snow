@@ -34,7 +34,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, 1fr); /* 3 colonnes */
   gap: 30px; /* espace entre les animations */
-  padding: 120px 0;
+  padding: 100px 0;
   justify-items: center; /* centre chaque image horizontalement */
 }
 
@@ -66,6 +66,6 @@ h1 {
 
 .modal img {
   width: 80%;
-  max-width: 900px;
+  max-width: 750px;
 }
 
