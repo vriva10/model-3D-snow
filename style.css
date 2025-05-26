@@ -5,12 +5,18 @@ body {
   text-align: center;
 }
 
+h1 {
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
+
+
 /* Schéma en haut de page */
 .schema {
   display: block;
   max-width: 90%;
   height: auto;
-  margin: 40px auto 20px auto;
+  margin: 50px auto 20px auto;
 }
 
 /* Bouton en haut à droite */
@@ -28,7 +34,7 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr); /* 3 colonnes */
   gap: 30px; /* espace entre les animations */
-  padding: 40px;
+  padding: 50px 0;
   justify-items: center; /* centre chaque image horizontalement */
 }
 
