@@ -14,9 +14,9 @@ h1 {
 /* Schéma en haut de page */
 .schema {
   display: block;
-  max-width: 90%;
+  max-width: 80%;
   height: auto;
-  margin: 100px auto 150px auto;
+  margin: 80px auto 120px auto;
 }
 
 /* Bouton en haut à droite */
