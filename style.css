@@ -16,7 +16,7 @@ h1 {
   display: block;
   max-width: 90%;
   height: auto;
-  margin: 60px auto 80px auto;
+  margin: 100px auto 150px auto;
 }
 
 /* Bouton en haut à droite */
@@ -34,7 +34,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, 1fr); /* 3 colonnes */
   gap: 30px; /* espace entre les animations */
-  padding: 70px 0;
+  padding: 120px 0;
   justify-items: center; /* centre chaque image horizontalement */
 }
 
