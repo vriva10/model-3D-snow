@@ -27,6 +27,13 @@ body {
   right: 40px;
 }
 
+.schema {
+  display: block;
+  max-width: 90%;
+  height: auto;
+  margin: 40px auto 20px auto;
+}
+
 /* 1 animation en bas à gauche */
 #animation3 {
   bottom: 20px;
