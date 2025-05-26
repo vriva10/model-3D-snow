@@ -19,12 +19,12 @@ body {
 /* 2 animations en haut (gauche et droite) */
 #animation1 {
   top: 20px;
-  left: 40px;
+  left: 50px;
 }
 
 #animation2 {
   top: 20px;
-  right: 40px;
+  right: 50px;
 }
 
 
