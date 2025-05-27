@@ -59,26 +59,35 @@
 
   <h2>Neige</h2>
   <table>
-    <tr><th>Variable</th><th>Valeur</th></tr>
-    <tr><td>Compétence</td><td>10</td></tr>
-    <tr><td>Viscosité</td><td>13</td></tr>
-    <tr><td>Rugosité</td><td>115</td></tr>
+    <tr><th>Variable</th><th>Typical Value</th><th>Description</th></tr>
+    <tr><td>max_snow_height</td><td>11</td><td>Maximum snow accumulation height</td></tr>
+    <tr><td>horizontal_weight</td><td>0.4</td><td>Controls lateral melting/spread</td></tr>
+    <tr><td>vertical_weight</td><td>0.6</td><td>Slows vertical melting (snow stays longer)</td></tr>
+    <tr><td>wind_dir_deg</td><td>1 - 360</td><td>Influences wind-based accumulation (N=0°, E=90°, etc.)</td></tr>
+    <tr><td>vertical_weight</td><td>1 - exp(-2.5 * norm_d)</td><td>Center-weighted accumulation, dome-shaped</td></tr>
+    <tr><td>vertical_weight</td><td>exp(-0.05 * slope_percent)</td><td>Reduces snow buildup on steep slopes</td></tr>
   </table>
 
   <h2>Eau</h2>
   <table>
-    <tr><th>Variable</th><th>Valeur</th></tr>
-    <tr><td>Compétence</td><td>11</td></tr>
-    <tr><td>Viscosité</td><td>1</td></tr>
-    <tr><td>Rugosité</td><td>0</td></tr>
+    <tr><th>Variable</th><th>Typical Value</th><th>Description</th></tr>
+    <tr><td>max_water_height</td><td>0.01 - 0.1</td><td>Very thin accumulation (puddle-like)</td></tr>
+    <tr><td>horizontal_weight</td><td>0</td><td>No lateral regression</td></tr>
+    <tr><td>vertical_weight</td><td>1</td><td>Rapid vertical loss (simulating runoff)</td></tr>
+    <tr><td>wind_dir_deg</td><td>	0 or no effect</td><td>Wind usually doesn't affect water pooling</td></tr>
+    <tr><td>vertical_weight</td><td>1 - exp(-5 * norm_d)</td><td>Sharp decay, more centered accumulation</td></tr>
+    <tr><td>vertical_weight</td><td>exp(-0.2 * slope_percent)</td><td>Strongly reduces accumulation on slopes</td></tr>
   </table>
 
   <h2>Lave</h2>
   <table>
-    <tr><th>Variable</th><th>Valeur</th></tr>
-    <tr><td>Compétence</td><td>29</td></tr>
-    <tr><td>Viscosité</td><td>45</td></tr>
-    <tr><td>Rugosité</td><td>260</td></tr>
+    <tr><th>Variable</th><th>Typical Value</th><th>Description</th></tr>
+    <tr><td>max_lava_height</td><td>1 - 2.5</td><td>Thick accumulation, simulating flow depth</td></tr>
+    <tr><td>horizontal_weight</td><td>0.1</td><td>Controls lateral lava spread</td></tr>
+    <tr><td>vertical_weight</td><td>0.9</td><td>Slower vertical loss (lava cools and stays)</td></tr>
+    <tr><td>wind_dir_deg</td><td>	0 or no effect</td><td>Wind usually doesn't affect lava pooling</td></tr>
+    <tr><td>vertical_weight</td><td>	1 - exp(-1.5 * norm_d)</td><td>Smoother gradient, allowing wider spread</td></tr>
+    <tr><td>vertical_weight</td><td>exp(-0.02 * slope_percent)</td><td>Less sensitive to slope due to lava’s viscosity</td></tr>
   </table>
 
   <script>
