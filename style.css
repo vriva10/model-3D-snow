@@ -34,30 +34,35 @@ h1 {
 }
 
 
-/* Schéma + texte côte à côte */
+/* Conteneur pour le schéma et le texte */
 .schema-container {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: stretch; /* même hauteur */
   gap: 40px;
+  max-width: 90%;
   margin: 40px auto 20px auto;
-  max-width: 1000px;
 }
 
-/* Image du schéma */
+/* Schéma explicatif */
 .schema {
-  max-width: 50%;
+  flex: 3;
+  max-width: 100%;
   height: auto;
+  object-fit: contain;
 }
 
-/* Bloc de texte */
+/* Encadré texte */
 .info-box {
+  flex: 1;
   background-color: rgba(255, 255, 255, 0.85);
   padding: 20px;
   border-radius: 8px;
   text-align: left;
-  max-width: 300px;
   box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Bouton en haut à droite */
