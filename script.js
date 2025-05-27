@@ -39,6 +39,9 @@ function createAnimation(id, prefix) {
 createAnimation("animation1", "melt");
 createAnimation("animation2", "melt2");
 createAnimation("animation3", "melt3");
+createAnimation("animation4", "melt4");
+createAnimation("animation5", "melt5");
+createAnimation("animation6", "melt6");
 
 // Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
