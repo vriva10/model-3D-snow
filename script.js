@@ -108,4 +108,7 @@ function setupLightbox(id, prefix) {
 setupLightbox("animation1", "melt");
 setupLightbox("animation2", "melt2");
 setupLightbox("animation3", "melt3");
+setupLightbox("animation4", "melt4");
+setupLightbox("animation5", "melt5");
+setupLightbox("animation6", "melt6");
 
