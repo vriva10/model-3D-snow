@@ -45,6 +45,11 @@ document.getElementById('openModel').addEventListener('click', () => {
   window.open('model.html', '_blank');
 });
 
+// Ouvrir la page des variables
+document.getElementById('openVariables').addEventListener('click', () => {
+  window.open('variables.html', '_blank');
+});
+
 // Lightbox (agrandir l'image au clic)
 function setupLightbox(id, prefix) {
   const img = document.getElementById(id);
