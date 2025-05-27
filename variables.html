@@ -11,6 +11,24 @@
       padding: 40px;
     }
 
+    /* Bouton retour */
+    #goBack {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      font-size: 14px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #goBack:hover {
+      background-color: #0056b3;
+    }
+
     h2 {
       margin-top: 40px;
       color: #333;
@@ -33,6 +51,9 @@
   </style>
 </head>
 <body>
+
+  <!-- Bouton retour -->
+  <button id="goBack">← Back to main page</button>
 
   <h1>Simulation Variables</h1>
 
@@ -60,5 +81,10 @@
     <tr><td>Rugosité</td><td>260</td></tr>
   </table>
 
+  <script>
+    document.getElementById("goBack").addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+  </script>
 </body>
 </html>
