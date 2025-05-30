@@ -44,6 +44,8 @@ import os
 from rasterio.features import geometry_mask
 from rasterio.transform import Affine
 from rasterio.warp import reproject
+from shapely.geometry import box, Polygon, MultiPolygon
+from shapely.errors import TopologicalError
 
 # Choisir le mode de visualisation
 mode = input("Choisissez le mode de rendu (1 pour enregistrer les images, 2 pour visualisation PyVista): ")
@@ -52,26 +54,40 @@ while mode not in ['1', '2']:
     mode = input("Choisissez le mode de rendu (1 pour enregistrer les images, 2 pour visualisation PyVista): ")
 
 # === Paramètres ===
-shapefile_path = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\test_sp_shape2.shp'
-raster_path = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\new_DEM.tif'
-out_dir = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel\test_small2'
+shapefile_path = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel_2\SP_JC_SM2.shp'
+raster_path = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel_2\raster_JC_SM2.tif'
+out_dir = r'C:\Users\ck291981\Desktop\Recherche\test_snowmodel_2\test_2'
 max_snow_height = 30.0
-view_vector = (1, 1, 2)
+view_vector = (5, 1, 2)
 ground_color = 'saddlebrown'
 snow_color = 'white'
-fractions = [0.75]
+fractions = [0.50]
 fps = 0.5
-vertical_weight = 0.55
-horizontal_weight = 0.45
-compression_factor = 0.1
+vertical_weight = 0.57
+horizontal_weight = 0.43
+compression_factor = 1
 
 assert abs(vertical_weight + horizontal_weight - 1.0) < 1e-6
 os.makedirs(out_dir, exist_ok=True)
 
-# === 1. Charger et filtrer la shapefile
+# === 1. Charger et réparer la shapefile
 gdf = gpd.read_file(shapefile_path)
-gdf = gdf[gdf.is_valid & ~gdf.is_empty]
 
+# Réparation des géométries invalides
+def make_valid_safe(geom):
+    try:
+        if not geom.is_valid:
+            geom = geom.buffer(0)
+        if isinstance(geom, (Polygon, MultiPolygon)):
+            return geom
+    except TopologicalError:
+        return None
+    return geom if geom.is_valid else None
+
+gdf["geometry"] = gdf["geometry"].apply(make_valid_safe)
+gdf = gdf[~gdf["geometry"].isna() & ~gdf["geometry"].is_empty]
+
+# Lecture du raster pour récupérer ses paramètres
 with rasterio.open(raster_path) as src:
     lidar = src.read(1)
     transform = src.transform
@@ -79,11 +95,17 @@ with rasterio.open(raster_path) as src:
     nodata = src.nodata
     bounds_raster = box(*src.bounds)
 
-gdf = gdf[gdf.geometry.intersects(bounds_raster)]
+# Clip sécuritaire : conserve les géométries qui touchent ou chevauchent le raster
+gdf_clipped = gpd.clip(gdf, bounds_raster)
+
+# Validation après clip
+gdf_clipped["geometry"] = gdf_clipped["geometry"].apply(make_valid_safe)
+gdf = gdf_clipped[~gdf_clipped["geometry"].isna() & ~gdf_clipped["geometry"].is_empty]
 
 if gdf.empty:
-    raise ValueError("Aucune géométrie valide n'intersecte le raster. Vérifier shapefile.")
+    raise ValueError("Aucune géométrie valide n'intersecte le raster. Vérifie la shapefile.")
 
+# Union de toutes les géométries en un seul polygone (pour traitement ultérieur)
 poly = gdf.geometry.unary_union
 
 # === 2. Générer et compresser l'hillshade à partir du DEM
@@ -158,61 +180,91 @@ zs0 = lidar[rows0, cols0]
 cloud_ground = pv.PolyData(np.c_[xs0, ys0, zs0])
 surf_ground = cloud_ground.delaunay_2d(alpha=np.hypot(res_x, res_y) * 1.5)
 
-# === 5. Fonte
-# === Paramètre global : direction du vent
+# === 5. Fonte de la neige
+# Paramètres globaux : direction du vent
 wind_dir_deg = 270  # 0=N, 90=E, 180=S, 270=O
 wind_rad = np.deg2rad(wind_dir_deg)
-wind_vector = np.array([np.cos(wind_rad), np.sin(wind_rad)])
+wind_vector = np.array([np.cos(wind_rad), np.sin(wind_rad)])  # Unité : vecteur horizontal
 
 for frac in fractions:
+    print(f"\n Fonte pour fraction = {frac:.2f}")
+
+    # Calcul des poids horizontaux et verticaux
     frac_h = frac * horizontal_weight
     frac_v = frac * vertical_weight
 
+    # Distance d’érosion pour simuler le retrait
     d = frac_h * D_max
-    poly_eroded = poly.buffer(-d)
-    if poly_eroded.is_empty:
-        print(f" Polygone vide à frac={frac:.2f}, on coupe.")
+
+    try:
+        # Érosion du polygone (retrait progressif)
+        poly_eroded = poly.buffer(-d)
+    except Exception as e:
+        print(f"Échec buffer à frac={frac:.2f}: {e}")
         continue
 
-    mask_e = geometry_mask([mapping(poly_eroded)], invert=True, transform=transform, out_shape=lidar.shape)
+    if poly_eroded.is_empty or not poly_eroded.is_valid:
+        print(f"Polygone érodé vide/invalide à frac={frac:.2f}")
+        continue
+
+    # Création du masque raster pour la zone érodée
+    mask_e = geometry_mask(
+        [mapping(poly_eroded)],
+        invert=True,
+        transform=transform,
+        out_shape=lidar.shape
+    )
+
+    # Masque final : zone valide + sans nodata
     mask_bool = mask_e & (lidar != nodata)
     rows, cols = np.where(mask_bool)
+    if rows.size == 0:
+        print("Aucun pixel valide trouvé dans la zone érodée")
+        continue
+
+    # Coordonnées XY et Z depuis le lidar
     xs, ys = rasterio.transform.xy(transform, rows, cols)
     zs_ground = lidar[rows, cols]
 
+    # Distance au bord pour moduler la fonte
     dist_e = distance_transform_edt(mask_e)
     D_max_e = np.nanmax(dist_e) * res_x
     norm_d = dist_e[rows, cols] * res_x / D_max_e
 
+    # Loi de fonte par décroissance exponentielle
     decay = 1 - np.exp(-2 * norm_d)
     snow_h = max_snow_height * decay * (1 - frac_v)
-    zs_snow = zs_ground + snow_h
 
+    # Calcul de la pente pour moduler la hauteur de neige
     lidar_smoothed = gaussian_filter(lidar, sigma=1)
     grad_y, grad_x = np.gradient(lidar_smoothed, res_y, res_x)
     slope = np.sqrt(grad_x**2 + grad_y**2)
     slope_percent = slope * 100
     slope_factor = np.exp(-0.05 * slope_percent[rows, cols])
 
-    adjusted_xs, adjusted_ys = xs, ys
+    # Optionnel : appliquer le facteur pente à snow_h si désiré
+    # snow_h *= slope_factor
+
+    # Initialisation des coordonnées ajustées (pour le vent)
+    adjusted_xs, adjusted_ys = np.array(xs), np.array(ys)
 
     if frac > 0:
+        # Déplacement selon le vent (pour visualisation de la redistribution)
         center_x, center_y = np.mean(xs), np.mean(ys)
         rel_coords = np.stack([xs - center_x, ys - center_y], axis=1)
         wind_proj = np.dot(rel_coords, wind_vector)
 
-        # Calcul du facteur de vent avec normalisation conservatrice
-        wind_factor = 1 + 2 * (wind_proj - wind_proj.min()) / (np.ptp(wind_proj) + 1e-6)
-        wind_factor = wind_factor / np.mean(wind_factor)  # Conserve le volume total de neige
-        
-        # Application du facteur de vent à la hauteur de neige
-        snow_h = snow_h * wind_factor
-        
-        # Ajustement des coordonnées spatiales (facultatif, pour visualisation)
-        adjusted_xs = xs + wind_vector[0] * wind_factor * 10
-        adjusted_ys = ys + wind_vector[1] * wind_factor * 10
+        # Facteur de vent : déplacement plus fort côté sous le vent
+        wind_factor = 1 + 3 * (wind_proj - wind_proj.min()) / (np.ptp(wind_proj) + 1e-6)
+        wind_factor = wind_factor / np.mean(wind_factor)  # Conserve le volume total
 
+        snow_h *= wind_factor
 
+        # Translation des coordonnées dans la direction du vent
+        adjusted_xs += wind_vector[0] * wind_factor * 10
+        adjusted_ys += wind_vector[1] * wind_factor * 10
+
+    # Création du nuage de points neige et surface
     cloud_snow = pv.PolyData(np.c_[adjusted_xs, adjusted_ys, zs_ground + snow_h])
     surf_snow = cloud_snow.delaunay_2d(alpha=np.hypot(res_x, res_y) * 5)
 
@@ -224,7 +276,7 @@ for frac in fractions:
     
     # Ajoutez ici votre code pour configurer le plotter, par exemple :
     # 1. Hillshade avec cmap bleu-jaune (cividis)
-    plotter.add_mesh(surf_hs, scalars='intensity', cmap='pink', opacity=0, show_scalar_bar=False)
+    plotter.add_mesh(surf_hs, scalars='intensity', cmap='pink', opacity=1, show_scalar_bar=False)
     
     # 2. Terrain transparent et neige
     plotter.add_mesh(surf_ground, color=ground_color, opacity=0.9, show_edges=False)
@@ -331,9 +383,9 @@ for frac in fractions:
         
     # Position de départ de la flèche dans la scène
     bounds = surf_hs.bounds
-    x0 = bounds[0] + 900
+    x0 = bounds[0] + 000
     y0 = bounds[3] - 1100
-    z0 = bounds[5] + 300
+    z0 = bounds[5] + 200
         
     arrow_start = np.array([x0, y0, z0])
     arrow_end = arrow_start + arrow_vec_world * 500
@@ -347,13 +399,13 @@ for frac in fractions:
     plotter.show(auto_close=False)
     
     if mode == '1':
-        out_path = os.path.join(out_dir, f'melt5_{int(frac*100)}.png')
+        out_path = os.path.join(out_dir, f'melt4_{int(frac*100)}.png')
     else:
         out_path = os.path.join(out_dir, f'melt_{int(frac*100)}.png')
     
     plotter.screenshot(out_path)
     plotter.close()
-    print(f" Image générée : {out_path}")
+    print(f"Image générée : {out_path}")
     </pre>
   </div>
 </body>
