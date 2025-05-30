@@ -50,12 +50,12 @@ document.getElementById('openVariables').addEventListener('click', () => {
 });
 
 // Lightbox (agrandir l'image au clic)
-function setupLightbox(id, prefix, customFrames = null) {
-  const img = document.getElementById(id);
-  const frames = customFrames
-    ? customFrames.map(i => `assets/${prefix}_${i}.png`)
+function setupLightbox(id, prefix, framesIndices = null) {
+  const frames = framesIndices
+    ? framesIndices.map(i => `assets/${prefix}_${i}.png`)
     : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
 
+  const img = document.getElementById(id);
   img.addEventListener("click", () => {
     let currentFrame = 0;
     const fps = 5;
