@@ -50,7 +50,7 @@ document.getElementById('openVariables').addEventListener('click', () => {
 });
 
 // Lightbox (agrandir l'image au clic)
-function setupLightbox(id, prefix, framesIndices = null) {
+function setupLightbox(id, prefix, framesIndices = null, fps = 5) {
   const frames = framesIndices
     ? framesIndices.map(i => `assets/${prefix}_${i}.png`)
     : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
@@ -58,7 +58,6 @@ function setupLightbox(id, prefix, framesIndices = null) {
   const img = document.getElementById(id);
   img.addEventListener("click", () => {
     let currentFrame = 0;
-    const fps = 5;
 
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
@@ -103,5 +102,5 @@ setupLightbox("animation3", "melt3");
 setupLightbox("animation4", "melt4");
 setupLightbox("animation5", "melt5");
 setupLightbox("animation6", "melt6");
-setupLightbox("animation7", "melt7", [0, 10, 20, 30]);
+setupLightbox("animation7", "melt7", [0, 10, 20, 30], 2);
 
