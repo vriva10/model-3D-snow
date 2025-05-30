@@ -1,6 +1,6 @@
-function createAnimation(id, prefix, fps = 5, customFrames = null) {
-  const frames = customFrames
-    ? customFrames.map(i => `assets/${prefix}_${i}.png`)
+function createAnimation(id, prefix, fps = 5, framesIndices = null) {
+  const frames = framesIndices
+    ? framesIndices.map(i => `assets/${prefix}_${i}.png`)
     : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
 
   let currentFrame = 0;
@@ -26,7 +26,6 @@ function createAnimation(id, prefix, fps = 5, customFrames = null) {
   }
 
   startAnimation();
-
   imgElement.addEventListener('mouseenter', stopAnimation);
   imgElement.addEventListener('mouseleave', startAnimation);
 }
