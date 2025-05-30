@@ -38,7 +38,7 @@ createAnimation("animation3", "melt3");
 createAnimation("animation4", "melt4");
 createAnimation("animation5", "melt5");
 createAnimation("animation6", "melt6");
-createAnimation("animation7", "melt7", 2, [0, 60, 120, 180]);  // FPS = 2, frames personnalisées
+createAnimation("animation7", "melt7", 2, [0, 10, 20, 30]);  // FPS = 2, frames personnalisées
 
 // Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
@@ -51,15 +51,14 @@ document.getElementById('openVariables').addEventListener('click', () => {
 });
 
 // Lightbox (agrandir l'image au clic)
-function setupLightbox(id, prefix) {
+function setupLightbox(id, prefix, customFrames = null) {
   const img = document.getElementById(id);
-  const frames = [];
-  for (let i = 0; i <= 180; i += 10) {
-    frames.push(`assets/${prefix}_${i}.png`);
-  }
+  const frames = customFrames
+    ? customFrames.map(i => `assets/${prefix}_${i}.png`)
+    : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
 
   img.addEventListener("click", () => {
-    let currentFrame = frames.indexOf(img.src);
+    let currentFrame = 0;
     const fps = 5;
 
     const overlay = document.createElement("div");
@@ -85,15 +84,12 @@ function setupLightbox(id, prefix) {
     overlay.appendChild(fullImg);
     document.body.appendChild(overlay);
 
-    // Empêcher clic sur l’image de fermer l’overlay
     fullImg.addEventListener("click", (e) => e.stopPropagation());
-
     overlay.addEventListener("click", () => {
       clearInterval(animationInterval);
       document.body.removeChild(overlay);
     });
 
-    // Animation dans la lightbox
     const animationInterval = setInterval(() => {
       currentFrame = (currentFrame + 1) % frames.length;
       fullImg.src = frames[currentFrame];
@@ -108,5 +104,5 @@ setupLightbox("animation3", "melt3");
 setupLightbox("animation4", "melt4");
 setupLightbox("animation5", "melt5");
 setupLightbox("animation6", "melt6");
-setupLightbox("animation7", "melt7");
+setupLightbox("animation7", "melt7", [0, 10, 20, 30]);
 
