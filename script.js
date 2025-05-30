@@ -1,4 +1,4 @@
-function createAnimation(id, prefix, fps = 5, framesIndices = null) {
+  function createAnimation(id, prefix, fps = 5, framesIndices = null) {
   const frames = framesIndices
     ? framesIndices.map(i => `assets/${prefix}_${i}.png`)
     : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
