@@ -102,5 +102,5 @@ setupLightbox("animation3", "melt3");
 setupLightbox("animation4", "melt4");
 setupLightbox("animation5", "melt5");
 setupLightbox("animation6", "melt6");
-setupLightbox("animation7", "melt7", [0, 10, 20, 30], 1);
+setupLightbox("animation7", "melt7", [0, 10, 20, 30], 0.2);
 
