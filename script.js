@@ -6,7 +6,6 @@ function createAnimation(id, prefix) {
 
   let currentFrame = 0;
   const imgElement = document.getElementById(id);
-  const fps = 5;
   let intervalId = null;
 
   function updateFrame() {
@@ -42,6 +41,7 @@ createAnimation("animation3", "melt3");
 createAnimation("animation4", "melt4");
 createAnimation("animation5", "melt5");
 createAnimation("animation6", "melt6");
+createAnimation("animation7", "melt7", 2);  // 2 FPS
 
 // Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
@@ -111,4 +111,5 @@ setupLightbox("animation3", "melt3");
 setupLightbox("animation4", "melt4");
 setupLightbox("animation5", "melt5");
 setupLightbox("animation6", "melt6");
+setupLightbox("animation7", "melt7");
 
