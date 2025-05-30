@@ -1,8 +1,7 @@
-function createAnimation(id, prefix) {
-  const frames = [];
-  for (let i = 0; i <= 180; i += 10) {
-    frames.push(`assets/${prefix}_${i}.png`);
-  }
+function createAnimation(id, prefix, fps = 5, customFrames = null) {
+  const frames = customFrames
+    ? customFrames.map(i => `assets/${prefix}_${i}.png`)
+    : Array.from({ length: 19 }, (_, i) => `assets/${prefix}_${i * 10}.png`);
 
   let currentFrame = 0;
   const imgElement = document.getElementById(id);
@@ -26,10 +25,8 @@ function createAnimation(id, prefix) {
     }
   }
 
-  // Lancer automatiquement
   startAnimation();
 
-  // Ajouter gestion du survol
   imgElement.addEventListener('mouseenter', stopAnimation);
   imgElement.addEventListener('mouseleave', startAnimation);
 }
@@ -41,7 +38,7 @@ createAnimation("animation3", "melt3");
 createAnimation("animation4", "melt4");
 createAnimation("animation5", "melt5");
 createAnimation("animation6", "melt6");
-createAnimation("animation7", "melt7", 2);  // 2 FPS
+createAnimation("animation7", "melt7", 2, [0, 60, 120, 180]);  // FPS = 2, frames personnalisées
 
 // Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
