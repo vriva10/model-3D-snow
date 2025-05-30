@@ -39,6 +39,7 @@ createAnimation("animation5", "melt5");
 createAnimation("animation6", "melt6");
 createAnimation("animation7", "melt7", 2, [0, 10, 20, 30]);  // FPS = 2, frames personnalisées
 createAnimation("animation8", "melt8", 2, [0, 10, 20, 30]);  // FPS = 2, frames personnalisées
+createAnimation("animation9", "melt9");
 
 // Ouvrir model.html dans un nouvel onglet
 document.getElementById('openModel').addEventListener('click', () => {
@@ -105,4 +106,5 @@ setupLightbox("animation5", "melt5");
 setupLightbox("animation6", "melt6");
 setupLightbox("animation7", "melt7", [0, 10, 20, 30], 2);
 setupLightbox("animation8", "melt8", [0, 10, 20, 30], 2);
+setupLightbox("animation9", "melt9");
 
